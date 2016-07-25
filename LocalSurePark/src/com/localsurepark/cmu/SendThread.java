@@ -25,10 +25,10 @@ public class SendThread implements Runnable {
 				System.out.print("Send command to client: ");
 				String answer = scan.nextLine();
 				
-				PrintWriter out;
+				PrintWriter clietOut;
 				try {
-					out = new PrintWriter(client.getOutputStream(), true);
-					out.println(answer);
+					clietOut = new PrintWriter(client.getOutputStream(), true);
+					clietOut.println(answer);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
