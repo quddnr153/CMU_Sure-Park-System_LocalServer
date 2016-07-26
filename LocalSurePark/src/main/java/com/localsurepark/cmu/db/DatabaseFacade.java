@@ -1,4 +1,4 @@
-package com.localsurepark.cmu;
+package com.localsurepark.cmu.db;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -7,6 +7,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 
+import com.localsurepark.cmu.CurrentInfo;
+
 public class DatabaseFacade {
 	static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
 	static final String DB_URL = "jdbc:mysql://127.0.0.1:3306/localsurepark";
@@ -14,29 +16,21 @@ public class DatabaseFacade {
 	static final String USERNAME = "root";
 	static final String PASSWORD = "cjswo0825";
 
-	public static void dbReservationOperation(String phoneNumber, String email, String parkingLotID
-											, int carSize, Timestamp reservationTime, String identificationNumber) {
+	public static void dbReservationDelete(String phoneNumber) {
 		Connection conn = null;
-		Statement stmtIR = null;
 		Statement stmtID = null;
 		try {
 			Class.forName(JDBC_DRIVER);
 			conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
-			System.out.println("\n- MySQL Connection");
+			System.out.println("\n- MySQL Connection, execute dbReservationDelete");
 
-			stmtIR = conn.createStatement();
-			stmtIR.execute("INSERT INTO reservation (phoneNumber,email,parkingLotID,carSize,reservationTime)"
-						+ "VALUES ('" + phoneNumber + "','" + email + "','" + parkingLotID + "," + carSize
-						+ ",'" + reservationTime + ")");
-			System.out.println("Reservation complete.");
 			stmtID = conn.createStatement();
-			stmtID.execute("INSERT INTO driver (phoneNumber,identificationNumber)"
-						+ "VALUES ('" + phoneNumber + "','" + identificationNumber + "')");
+			stmtID.execute("DELETE FROM driver WHERE phoneNumber = '" + phoneNumber + "'");
+			System.out.println("Reservation delete complete.");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			try {
-				stmtIR.close();
 				stmtID.close();
 				conn.close();
 			} catch (Exception e) {
@@ -46,7 +40,40 @@ public class DatabaseFacade {
 		System.out.println("\n\n- MySQL Connection Close");
 	}
 	
-	public static void dbCntDevRegOperation(String devStr) {
+	public static void dbReservationInsert(String phoneNumber, String email, String parkingLotID, int carSize,
+			Timestamp reservationTime, String identificationNumber) {
+		Connection conn = null;
+		Statement stmtIR = null;
+		Statement stmtID = null;
+		try {
+			Class.forName(JDBC_DRIVER);
+			conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
+			System.out.println("\n- MySQL Connection, execute dbReservationInsert");
+
+			stmtID = conn.createStatement();
+			stmtID.execute("INSERT INTO driver (phoneNumber,identificationNumber)" + "VALUES ('" + phoneNumber + "','"
+					+ identificationNumber + "')");
+			
+			stmtIR = conn.createStatement();
+			stmtIR.execute("INSERT INTO reservation (phoneNumber,email,parkingLotID,carSize,reservationTime)"
+					+ "VALUES ('" + phoneNumber + "','" + email + "','" + parkingLotID + "," + carSize + ",'"
+					+ reservationTime + ")");
+			System.out.println("Reservation complete.");
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				stmtID.close();
+				stmtIR.close();
+				conn.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println("\n\n- MySQL Connection Close");
+	}
+
+	public static void dbParkingContollerDeviceOperations(String devStr) {
 		Statement stmtS = null;
 		ResultSet rs = null;
 		Connection conn = null;
@@ -63,7 +90,7 @@ public class DatabaseFacade {
 		try {
 			Class.forName(JDBC_DRIVER);
 			conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
-			System.out.println("\n- MySQL Connection");
+			System.out.println("\n- MySQL Connection, execute dbCntDevRegOperation");
 			stmtS = conn.createStatement();
 
 			String selectSql;
@@ -148,7 +175,7 @@ public class DatabaseFacade {
 		System.out.println("\n\n- MySQL Connection Close");
 	}
 
-	public static void dbAssignPSOperation(String psArg) {
+	public static void dbParkingSpaceAssignOperation(String psArg) {
 		// TEST CODE
 		CurrentInfo.reservationID = 1;
 		Connection conn = null;
@@ -157,7 +184,7 @@ public class DatabaseFacade {
 		try {
 			Class.forName(JDBC_DRIVER);
 			conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
-			System.out.println("\n- MySQL Connection");
+			System.out.println("\n- MySQL Connection, execute dbParkingSpaceAssignOperation");
 
 			stmtI = conn.createStatement();
 			stmtI.execute("INSERT INTO parkedposition (reservationID,parkingContollerDeviceID)" + "VALUES ("

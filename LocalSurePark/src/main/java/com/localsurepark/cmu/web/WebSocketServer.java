@@ -17,6 +17,7 @@ public class WebSocketServer implements Runnable{
 	public void run() {
 		while (true) {
 			Socket client = null;
+			System.out.println("Waiting Web Socket Server Accept ...");
 			try {
 				client = server.accept();
 			} catch (IOException e) {
