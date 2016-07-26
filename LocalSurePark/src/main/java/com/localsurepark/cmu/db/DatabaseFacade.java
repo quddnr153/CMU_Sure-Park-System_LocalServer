@@ -13,19 +13,20 @@ public class DatabaseFacade {
 	static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
 	static final String DB_URL = "jdbc:mysql://127.0.0.1:3306/localsurepark";
 
-	static final String USERNAME = "root";
-	static final String PASSWORD = "cjswo0825";
+	static final String USERNAME = "surepark";
+	static final String PASSWORD = "surepark";
 
-	public static void dbReservationDelete(String phoneNumber) {
+	public static int dbReservationDelete(String phoneNumber) {
 		Connection conn = null;
 		Statement stmtID = null;
+		int result = 0;
 		try {
 			Class.forName(JDBC_DRIVER);
 			conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
 			System.out.println("\n- MySQL Connection, execute dbReservationDelete");
 
 			stmtID = conn.createStatement();
-			stmtID.execute("DELETE FROM driver WHERE phoneNumber = '" + phoneNumber + "'");
+			result = stmtID.executeUpdate("DELETE FROM driver WHERE phoneNumber = '" + phoneNumber + "'");
 			System.out.println("Reservation delete complete.");
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -38,10 +39,67 @@ public class DatabaseFacade {
 			}
 		}
 		System.out.println("\n\n- MySQL Connection Close");
+		return result;
 	}
 	
-	public static void dbReservationInsert(String phoneNumber, String email, String parkingLotID, int carSize,
+	public static int dbReservationIDSelect(String phoneNumber) {
+	      Statement stmtS = null;
+	      ResultSet rs = null;
+	      Connection conn = null;
+	      int reservationID = 0;
+	      try {
+	         Class.forName(JDBC_DRIVER);
+	         conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
+	         System.out.println("\n- MySQL Connection, execute dbReservationIDSelect");
+	         stmtS = conn.createStatement();
+
+	         String selectSql;
+	         selectSql = "SELECT reservationID FROM reservation WHERE phoneNumber = '" + phoneNumber + "'";
+	         stmtS.execute(selectSql);
+	         rs = stmtS.getResultSet();
+	         if (rs.next()) {
+	            reservationID = rs.getInt("reservationID");
+	         } else {
+	            // 
+	         }
+	      } catch (SQLException ex) {
+	         // handle any errors
+	         System.out.println("SQLException: " + ex.getMessage());
+	         System.out.println("SQLState: " + ex.getSQLState());
+	         System.out.println("VendorError: " + ex.getErrorCode());
+	      } catch (Exception ex) {
+	         ex.printStackTrace();
+	      } finally {
+	         // it is a good idea to release
+	         // resources in a finally{} block
+	         // in reverse-order of their creation
+	         // if they are no-longer needed
+	         if (rs != null) {
+	            try {
+	               rs.close();
+	            } catch (SQLException sqlEx) {
+	            } // ignore
+
+	            rs = null;
+	         }
+
+	         if (stmtS != null) {
+	            try {
+	               stmtS.close();
+	            } catch (SQLException sqlEx) {
+	            } // ignore
+
+	            stmtS = null;
+	         }
+	      }
+	      System.out.println("\n\n- MySQL Connection Close");
+	      return reservationID;
+	   }
+	
+	public static int dbReservationInsert(String phoneNumber, String email, String parkingLotID, int carSize,
 			Timestamp reservationTime, String identificationNumber) {
+		
+		int result = 0;
 		Connection conn = null;
 		Statement stmtIR = null;
 		Statement stmtID = null;
@@ -51,13 +109,13 @@ public class DatabaseFacade {
 			System.out.println("\n- MySQL Connection, execute dbReservationInsert");
 
 			stmtID = conn.createStatement();
-			stmtID.execute("INSERT INTO driver (phoneNumber,identificationNumber)" + "VALUES ('" + phoneNumber + "','"
+			stmtID.executeUpdate("INSERT INTO driver (phoneNumber,identificationNumber)" + "VALUES ('" + phoneNumber + "','"
 					+ identificationNumber + "')");
 			
 			stmtIR = conn.createStatement();
-			stmtIR.execute("INSERT INTO reservation (phoneNumber,email,parkingLotID,carSize,reservationTime)"
-					+ "VALUES ('" + phoneNumber + "','" + email + "','" + parkingLotID + "," + carSize + ",'"
-					+ reservationTime + ")");
+			result = stmtIR.executeUpdate("INSERT INTO reservation (phoneNumber,email,parkingLotID,carSize,reservationTime) "
+					+ "VALUES ( '" + phoneNumber + "','" + email + "','" + parkingLotID + "'," + carSize + ",'"
+					+ reservationTime + "')" );
 			System.out.println("Reservation complete.");
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -71,6 +129,8 @@ public class DatabaseFacade {
 			}
 		}
 		System.out.println("\n\n- MySQL Connection Close");
+		
+		return result;
 	}
 
 	public static void dbParkingContollerDeviceOperations(String devStr) {
@@ -177,7 +237,7 @@ public class DatabaseFacade {
 
 	public static void dbParkingSpaceAssignOperation(String psArg) {
 		// TEST CODE
-		CurrentInfo.reservationID = 1;
+		//CurrentInfo.reservationID = 1;
 		Connection conn = null;
 		Statement stmtI = null;
 		Statement stmtU = null;
@@ -207,4 +267,52 @@ public class DatabaseFacade {
 		}
 		System.out.println("\n\n- MySQL Connection Close");
 	}
+	
+	public static void dbReservationExitUpdate(String phoneNumber, Timestamp ts) {
+	      Connection conn = null;
+	      Statement stmtU = null;
+	      try {
+	         Class.forName(JDBC_DRIVER);
+	         conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
+	         System.out.println("\n- MySQL Connection, execute dbReservationExitUpdate");
+
+	         stmtU = conn.createStatement();
+	         stmtU.execute("UPDATE reservation SET exitTime = '" + ts + "' WHERE phoneNumber = '" + phoneNumber + "'");
+	         System.out.println("Reservation update complete.");
+	      } catch (Exception e) {
+	         e.printStackTrace();
+	      } finally {
+	         try {
+	            stmtU.close();
+	            conn.close();
+	         } catch (Exception e) {
+	            e.printStackTrace();
+	         }
+	      }
+	      System.out.println("\n\n- MySQL Connection Close");
+	   }
+	   
+	   public static void dbReservationEntranceUpdate(String phoneNumber, Timestamp ts) {
+	      Connection conn = null;
+	      Statement stmtU = null;
+	      try {
+	         Class.forName(JDBC_DRIVER);
+	         conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
+	         System.out.println("\n- MySQL Connection, execute dbReservationEntranceUpdate");
+
+	         stmtU = conn.createStatement();
+	         stmtU.execute("UPDATE reservation SET entranceTime = '" + ts + "' WHERE phoneNumber = '" + phoneNumber + "'");
+	         System.out.println("Reservation update complete.");
+	      } catch (Exception e) {
+	         e.printStackTrace();
+	      } finally {
+	         try {
+	            stmtU.close();
+	            conn.close();
+	         } catch (Exception e) {
+	            e.printStackTrace();
+	         }
+	      }
+	      System.out.println("\n\n- MySQL Connection Close");
+	   }
 }

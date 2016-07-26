@@ -5,15 +5,18 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.sql.Timestamp;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import com.localsurepark.cmu.db.DatabaseFacade;
+
 public class ClientThread implements Runnable {
 
-	private final int RESERVATION = 1;
-	private final int OPENTHEGATE = 2;
+	private final int MAKERESERVATION = 1;
+	private final int DELETERESERVATION = 2;
 	private Socket client;
 
 	public ClientThread(Socket client) {
@@ -36,21 +39,23 @@ public class ClientThread implements Runnable {
 			String readLine = input.readLine();
 			System.out.println("1. clinet send : " + readLine);
 			JSONParser parser = new JSONParser();
-			boolean result = false;
+			String phoneNumber = null;
+			JSONObject sendJsonO = null;
 			try {
 				Object obj = parser.parse(readLine);
 				JSONObject recvJsonObject = (JSONObject) obj;
 
+				
 				int type = Integer.parseInt(recvJsonObject.get("type").toString());
 
-				result = processType(type , recvJsonObject);
-
+				sendJsonO = processType(type , recvJsonObject);
+			
+				
 			} catch (ParseException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
-			JSONObject sendJsonO = new JSONObject();
 
 			PrintWriter out = new PrintWriter(client.getOutputStream(), true);
 			out.println(sendJsonO.toJSONString());
@@ -62,16 +67,18 @@ public class ClientThread implements Runnable {
 
 	}
 
-	public boolean processType(int type,JSONObject recvJsonObject) {
-		boolean result = false;
+	public JSONObject processType(int type,JSONObject recvJsonObject) {
+		JSONObject result = null;
 
 		switch (type) {
-		case RESERVATION:
-
+		case MAKERESERVATION:
+			
+			result = processMakeReservation(recvJsonObject);
 			
 			break;
-		case OPENTHEGATE:
+		case DELETERESERVATION:
 
+			result = processMakeReservation(recvJsonObject);
 			
 			break;
 
@@ -82,12 +89,46 @@ public class ClientThread implements Runnable {
 		return result;
 	}
 	
-	public boolean processReservation(JSONObject recvJsonObject)
+	public JSONObject processMakeReservation(JSONObject recvJsonObject)
 	{
-		boolean result = false;
+		JSONObject result = new JSONObject();
+		int insertResrult = DatabaseFacade.dbReservationInsert(recvJsonObject.get("phoneNumber").toString(), recvJsonObject.get("email").toString(), recvJsonObject.get("parkingLotID").toString(), Integer.parseInt(recvJsonObject.get("carSize").toString()), Timestamp.valueOf(recvJsonObject.get("reservationTime").toString()), recvJsonObject.get("identificationNumber").toString());
 		
+		System.out.println(insertResrult + "");
+		if(insertResrult > 0)
+		{
+			System.out.println("reservation 성공");
+			int reservationID = DatabaseFacade.dbReservationIDSelect(recvJsonObject.get("phoneNumber").toString());
+			result.put("result", "success");
+			result.put("reservationID", reservationID+"");
+			
+		}else
+		{
+			System.out.println("reservation 실패");
+			result.put("result", "fail");
+			result.put("reservationID", "null");
+		}
 		
+		return result;
+	}
+	
+	
+	public JSONObject processDeleteReservation(JSONObject recvJsonObject)
+	{
+		JSONObject result = new JSONObject();
 		
+		String phoneNumber = recvJsonObject.get("phoneNumber").toString();
+		
+		int deleteResult = DatabaseFacade.dbReservationDelete(phoneNumber);
+
+
+		if(deleteResult > 0)
+		{
+			result.put("result", "success");
+		}else
+		{
+			result.put("result", "fail");
+		}
 		
 		
 		return result;
