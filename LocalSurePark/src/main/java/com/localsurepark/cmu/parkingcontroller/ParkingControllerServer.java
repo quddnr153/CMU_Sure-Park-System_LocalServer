@@ -7,6 +7,9 @@ import java.net.Socket;
 public class ParkingControllerServer implements Runnable{
 
 	private static int portNum = 550;
+	private static SenderCallback callback;
+	
+	
 	
 	public void run() {
 		// TODO Auto-generated method stub
@@ -37,12 +40,28 @@ public class ParkingControllerServer implements Runnable{
 			System.out.println("Waiting for input.....");
 
 			ReceiveThread rcv = new ReceiveThread(client);
-			SendThread snd = new SendThread(client);
+			//SendThread snd = new SendThread(client);
 			Thread rcvThread = new Thread(rcv);
-			Thread sndThread = new Thread(snd);
+			//Thread sndThread = new Thread(snd);
 			rcvThread.start();
-			sndThread.start();
+			//sndThread.start();
+
+			callback = new SenderCallback(client);
+			
 		}
 	}
+
+
+
+	public static SenderCallback getCallback() {
+		return callback;
+	}
+
+
+
+	
+	
+	
+	
 
 }

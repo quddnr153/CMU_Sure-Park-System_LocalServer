@@ -8,6 +8,8 @@ public class WebSocketServer implements Runnable{
 	
 	private ServerSocket server;
 	
+	
+	
 	public void setWebSocket(int port) throws IOException
 	{
 		server = new ServerSocket(port);
