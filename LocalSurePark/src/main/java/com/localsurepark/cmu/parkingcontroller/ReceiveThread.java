@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
-import com.localsurepark.cmu.CurrentInfo;
 import com.localsurepark.cmu.db.DatabaseFacade;
 
 public class ReceiveThread implements Runnable {
@@ -31,53 +30,22 @@ public class ReceiveThread implements Runnable {
          try {
             String answer = input.readLine();
 
-            if (answer.length() > 20) {
+            if (answer.length() > 30) {
                // device register operation
-               DatabaseFacade.dbParkingContollerDeviceOperations(answer);
-            } else if (answer.length() == 10) {
+               DatabaseFacade.updateParkingContollerDevicesFromParkinglot(answer);
+            } else  {
                System.out.println("1. clinet 10 send : " + answer);
-               if (answer.equals(CurrentInfo.stall1)) {
-                  System.out.println("The driver parked on the parking space 1.");
-                  DatabaseFacade.dbParkingSpaceAssignOperation(answer);
-               } else if (answer.equals(CurrentInfo.stall2)) {
-                  System.out.println("The driver parked on the parking space 2.");
-                  DatabaseFacade.dbParkingSpaceAssignOperation(answer);
-               } else if (answer.equals(CurrentInfo.stall3)) {
-                  System.out.println("The driver parked on the parking space 3.");
-                  DatabaseFacade.dbParkingSpaceAssignOperation(answer);
-               } else if (answer.equals(CurrentInfo.stall4)) {
-                  System.out.println("The driver parked on the parking space 4.");
-                  DatabaseFacade.dbParkingSpaceAssignOperation(answer);
+               String[] results = answer.split(",");
+               if (results[0].equals("0")) {
+                  System.out.println("Device " + results[1] + " state change to not broken or not parked");
+                  DatabaseFacade.updateParkingContollerDeviceStateFromParkinglot(results[1], results[0]);
+               } else if (results[0].equals("1")) {
+                  System.out.println("Device " + results[1] + " state change to broken or parked");
+                  DatabaseFacade.updateParkingContollerDeviceStateFromParkinglot(results[1], results[0]);
+               } else if (results[0].equals("2")) {
+                  System.out.println("Device " + results[1] + " state change to parked");
+                  DatabaseFacade.insertParkingposition(results[1]);
                }
-               if (answer.equals(CurrentInfo.entryID)) {
-                  System.out.println("The driver is in front of the entry gate.");
-                  DatabaseFacade.dbParkingLotGateUpdate(answer, 0);
-               } else if (answer.equals(CurrentInfo.exitID)) {
-                  System.out.println("The driver is in front of the exit gate.");
-                  DatabaseFacade.dbParkingLotGateUpdate(answer, 0);
-               }
-            } else {
-               System.out.println("1. clinet send : " + answer);
-               if (answer.equals("a")) {
-                  System.out.println("The driver is leaving on the parking space 1.");
-                  DatabaseFacade.dbParkingLotStallUpdate(CurrentInfo.stall1);
-               } else if (answer.equals("b")) {
-                  System.out.println("The driver is leaving on the parking space 2.");
-                  DatabaseFacade.dbParkingLotStallUpdate(CurrentInfo.stall2);
-               } else if (answer.equals("c")) {
-                  System.out.println("The driver is leaving on the parking space 3.");
-                  DatabaseFacade.dbParkingLotStallUpdate(CurrentInfo.stall3);
-               } else if (answer.equals("d")) {
-                  System.out.println("The driver is leaving on the parking space 4.");
-                  DatabaseFacade.dbParkingLotStallUpdate(CurrentInfo.stall4);
-               }
-               if (answer.equals("3")) {
-                  System.out.println("The driver is in front of the entry gate.");
-                  DatabaseFacade.dbParkingLotGateUpdate(CurrentInfo.entryID, 1);
-               } else if (answer.equals("4")) {
-                  System.out.println("The driver is in front of the exit gate.");
-                  DatabaseFacade.dbParkingLotGateUpdate(CurrentInfo.exitID, 1);
-               } 
             }
          } catch (IOException e) {
             // TODO Auto-generated catch block
@@ -85,5 +53,4 @@ public class ReceiveThread implements Runnable {
          }
       }
    }
-
 }

@@ -3,14 +3,14 @@ package com.localsurepark.cmu.domain;
 import java.sql.Timestamp;
 
 public class Reservation {
-	public int reservationID;
-	public String phoneNumber;
-	public String email;
-	public String parkingLotID;
-	public int carSize;
-	public Timestamp reservationTime;
-	public Timestamp entranranceTime;
-	public Timestamp exitTime;
+	private int reservationID;
+	private String phoneNumber;
+	private String email;
+	private String parkingLotID;
+	private int carSize;
+	private Timestamp reservationTime;
+	private Timestamp entranceTime;
+	private Timestamp exitTime;
 
 	public int getReservationID() {
 		return reservationID;
@@ -60,12 +60,12 @@ public class Reservation {
 		this.reservationTime = reservationTime;
 	}
 
-	public Timestamp getEntranranceTime() {
-		return entranranceTime;
+	public Timestamp getEntranceTime() {
+		return entranceTime;
 	}
 
-	public void setEntranranceTime(Timestamp entranranceTime) {
-		this.entranranceTime = entranranceTime;
+	public void setEntranceTime(Timestamp entranceTime) {
+		this.entranceTime = entranceTime;
 	}
 
 	public Timestamp getExitTime() {

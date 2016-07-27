@@ -1,11 +1,11 @@
 package com.localsurepark.cmu;
 
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.localsurepark.cmu.domain.PayingInfo;
 import com.localsurepark.cmu.parkingcontroller.ParkingControllerServer;
-import com.localsurepark.cmu.parkingcontroller.ReceiveThread;
 import com.localsurepark.cmu.web.WebSocketServer;
 
 /**
@@ -14,8 +14,12 @@ import com.localsurepark.cmu.web.WebSocketServer;
  */
 public class MainApplication 
 {
+	
+	
     public static void main( String[] args )
     {
+    	
+    	Queue<PayingInfo> payingQueue = new ConcurrentLinkedQueue<PayingInfo>();
 
     	ParkingControllerServer parkingContorollerServer = new ParkingControllerServer();
     	
