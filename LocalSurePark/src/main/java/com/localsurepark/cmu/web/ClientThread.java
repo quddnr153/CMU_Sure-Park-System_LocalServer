@@ -9,6 +9,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Queue;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -16,6 +17,7 @@ import org.json.simple.parser.ParseException;
 
 import com.localsurepark.cmu.CurrentInfo;
 import com.localsurepark.cmu.db.DatabaseFacade;
+import com.localsurepark.cmu.domain.PayingInfo;
 import com.localsurepark.cmu.domain.Reservation;
 import com.localsurepark.cmu.parkingcontroller.ParkingControllerServer;
 
@@ -29,10 +31,13 @@ public class ClientThread implements Runnable {
    
    
    private Socket client;
+   
+   private Queue<PayingInfo> payingQueue;
 
-   public ClientThread(Socket client) {
+   public ClientThread(Socket client, Queue<PayingInfo> payingQueue) {
       this.client = client;
 
+      this.payingQueue = payingQueue;
       System.out.println("클라이언트 접속 시작!");
    }
 
@@ -236,6 +241,8 @@ public class ClientThread implements Runnable {
              result.put("result", "success");
              result.put("entranceTime",today);
              result.put("state", "parked");
+             
+             
           }
           
           
@@ -297,6 +304,11 @@ public class ClientThread implements Runnable {
              result.put("result", "success");
              result.put("exitTime",today);
              result.put("state", "paying");
+             
+            PayingInfo payingInfo = new PayingInfo(phoneNumber, state, reservationID);
+             
+             payingQueue.offer(payingInfo);
+             
           }
           
           

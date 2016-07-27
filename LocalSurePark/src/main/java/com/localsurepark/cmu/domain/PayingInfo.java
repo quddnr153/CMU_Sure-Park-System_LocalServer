@@ -3,19 +3,17 @@ package com.localsurepark.cmu.domain;
 public class PayingInfo {
 
 	private String phoneNumber;
-	private String identificationNumber;
 	private String state;
-	private String reservationID;
+	private int reservationID;
 
 	public PayingInfo() {
 		super();
 		// TODO Auto-generated constructor stub
 	}
 
-	public PayingInfo(String phoneNumber, String identificationNumber, String state, String reservationID) {
+	public PayingInfo(String phoneNumber, String state, int reservationID) {
 		super();
 		this.phoneNumber = phoneNumber;
-		this.identificationNumber = identificationNumber;
 		this.state = state;
 		this.reservationID = reservationID;
 	}
@@ -28,13 +26,7 @@ public class PayingInfo {
 		this.phoneNumber = phoneNumber;
 	}
 
-	public String getIdentificationNumber() {
-		return identificationNumber;
-	}
-
-	public void setIdentificationNumber(String identificationNumber) {
-		this.identificationNumber = identificationNumber;
-	}
+	
 
 	public String getState() {
 		return state;
@@ -44,11 +36,11 @@ public class PayingInfo {
 		this.state = state;
 	}
 
-	public String getReservationID() {
+	public int getReservationID() {
 		return reservationID;
 	}
 
-	public void setReservationID(String reservationID) {
+	public void setReservationID(int reservationID) {
 		this.reservationID = reservationID;
 	}
 
