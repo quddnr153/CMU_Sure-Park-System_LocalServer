@@ -16,6 +16,8 @@ public class PayingQueueThread implements Runnable {
 	private Queue<PayingInfo> payingQueue;
 
 	private HttpRestFulClient httpRestFulClient;
+	
+	
 
 	public PayingQueueThread() {
 
@@ -32,54 +34,69 @@ public class PayingQueueThread implements Runnable {
 
 	public void run() {
 
-		while(!payingQueue.isEmpty())
+		
+		while(true)
 		{
-			
-			PayingInfo payingInfo= payingQueue.poll();
-			
-			try {
-				httpRestFulClient.OauthToken();
-			} catch (ClientProtocolException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			JSONObject responseResult = null;
-			
-			try {
-				responseResult = httpRestFulClient.paymentRestfulPost(payingInfo.getPhoneNumber(), payingInfo.getReservationID());
-			} catch (ClientProtocolException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			if(responseResult.containsKey("result")&&responseResult.get("result").equals("success"))
+			if(!payingQueue.isEmpty() && payingQueue !=null)
 			{
-				int deleteResult = DatabaseFacade.deleteDriverForCancellation(payingInfo.getPhoneNumber());
+
 				
-				if(deleteResult > 0)
+				boolean result = false;
+				try {
+					result = httpRestFulClient.OauthToken();
+				} catch (ClientProtocolException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (ParseException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				if(result)
 				{
-					System.out.println("결제 성공....");
-				}else
+					PayingInfo payingInfo= payingQueue.poll();
+					JSONObject responseResult = null;
+					
+					try {
+						responseResult = httpRestFulClient.paymentRestfulPost(payingInfo.getPhoneNumber(), payingInfo.getReservationID());
+					} catch (ClientProtocolException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (ParseException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+					if(responseResult.containsKey("result")&&responseResult.get("result").equals("success"))
+					{
+						int deleteResult = DatabaseFacade.deleteDriverForCancellation(payingInfo.getPhoneNumber());
+						
+						if(deleteResult > 0)
+						{
+							System.out.println("결제 성공....");
+							
+						}else
+						{
+							
+						}
+						
+					}else
+					{
+						
+						payingQueue.offer(payingInfo);
+						
+					}
+				}
+				else
 				{
 					
 				}
-				
-			}else
-			{
-				payingQueue.offer(payingInfo);
 				
 			}
 

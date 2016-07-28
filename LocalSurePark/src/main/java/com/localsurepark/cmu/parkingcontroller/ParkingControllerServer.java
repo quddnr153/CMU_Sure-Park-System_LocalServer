@@ -3,14 +3,31 @@ package com.localsurepark.cmu.parkingcontroller;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import com.localsurepark.cmu.domain.ParkingLot;
 
 public class ParkingControllerServer implements Runnable{
 
 	private static int portNum = 550;
 	private static SenderCallback callback;
+	private HashMap<String, SenderCallback> controllerIDClientHashMap;
 	
+	private HashMap<String, String> deviceIDAndAuduioIDHashMap;
 	
-	
+
+
+
+
+	public ParkingControllerServer(HashMap<String, SenderCallback> controllerIDClientHashMap,HashMap<String, String> deviceIDAndAuduioIDHashMap) {
+		super();
+		this.controllerIDClientHashMap = controllerIDClientHashMap;
+		this.deviceIDAndAuduioIDHashMap = deviceIDAndAuduioIDHashMap;
+	}
+
+
+
 	public void run() {
 		// TODO Auto-generated method stub
 		ServerSocket localServer = null;
@@ -39,7 +56,7 @@ public class ParkingControllerServer implements Runnable{
 			System.out.println("Connection successful");
 			System.out.println("Waiting for input.....");
 
-			ReceiveThread rcv = new ReceiveThread(client);
+			ReceiveThread rcv = new ReceiveThread(client, controllerIDClientHashMap,deviceIDAndAuduioIDHashMap);
 			//SendThread snd = new SendThread(client);
 			Thread rcvThread = new Thread(rcv);
 			//Thread sndThread = new Thread(snd);

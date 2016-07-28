@@ -9,6 +9,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Queue;
 
 import org.json.simple.JSONObject;
@@ -17,9 +18,11 @@ import org.json.simple.parser.ParseException;
 
 import com.localsurepark.cmu.CurrentInfo;
 import com.localsurepark.cmu.db.DatabaseFacade;
+import com.localsurepark.cmu.domain.ParkingLot;
 import com.localsurepark.cmu.domain.PayingInfo;
 import com.localsurepark.cmu.domain.Reservation;
 import com.localsurepark.cmu.parkingcontroller.ParkingControllerServer;
+import com.localsurepark.cmu.parkingcontroller.SenderCallback;
 
 public class ClientThread implements Runnable {
 
@@ -30,14 +33,21 @@ public class ClientThread implements Runnable {
    private final int OPENTHEEXITGATE = 5;
    
    
+   
    private Socket client;
    
    private Queue<PayingInfo> payingQueue;
+   private HashMap<String, SenderCallback> controllerIDClientHashMap;
+   private HashMap<String, String> deviceIDAndAuduioIDHashMap;
+   private Queue<Reservation> reservationNoShowQueue;
 
-   public ClientThread(Socket client, Queue<PayingInfo> payingQueue) {
+   public ClientThread(Socket client, Queue<PayingInfo> payingQueue,HashMap<String, SenderCallback> controllerIDClientHashMap,HashMap<String, String> deviceIDAndAuduioIDHashMap,Queue<Reservation> reservationNoShowQueue) {
       this.client = client;
 
       this.payingQueue = payingQueue;
+      this.controllerIDClientHashMap = controllerIDClientHashMap;
+      this.deviceIDAndAuduioIDHashMap = deviceIDAndAuduioIDHashMap;
+      this.reservationNoShowQueue = reservationNoShowQueue;
       System.out.println("클라이언트 접속 시작!");
    }
 
@@ -126,6 +136,7 @@ public class ClientThread implements Runnable {
    public JSONObject processMakeReservation(JSONObject recvJsonObject)
    {
       JSONObject result = new JSONObject();
+      
       int insertResrult = DatabaseFacade.insertDriverAndReservation(recvJsonObject.get("phoneNumber").toString(), recvJsonObject.get("email").toString(), recvJsonObject.get("parkingLotID").toString(), Integer.parseInt(recvJsonObject.get("carSize").toString()), Timestamp.valueOf(recvJsonObject.get("reservationTime").toString()), recvJsonObject.get("identificationNumber").toString());
       
       System.out.println(insertResrult + "");
@@ -133,6 +144,8 @@ public class ClientThread implements Runnable {
       {
          System.out.println("reservation 성공");
          int reservationID = DatabaseFacade.selectReservationIDFromReservation(recvJsonObject.get("phoneNumber").toString());
+         Reservation reservation  = DatabaseFacade.selectAllFromReservation(recvJsonObject.get("phoneNumber").toString());
+         reservationNoShowQueue.offer(reservation);
          result.put("result", "success");
          result.put("reservationID", reservationID+"");
          
@@ -198,22 +211,25 @@ public class ClientThread implements Runnable {
       int reservationID = Integer.parseInt(recvJsonObject.get("reservationID").toString());
 
       Reservation reservation = DatabaseFacade.selectAllFromReservation(phoneNumber);
+      
+      System.out.println(CurrentInfo.entryID);
+      
       int entryState = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.entryID);
-      int satll1 = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.stall1);
-      int satll2 = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.stall2);
-      int satll3 = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.stall3);
-      int satll4 = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.stall4);
-      int[] stallArray = {satll1,satll2,satll3,satll4};
-      ArrayList<Integer> availableStall = new ArrayList<Integer>();
-      for(int i=0;i<stallArray.length;i++)
+      
+      ArrayList<ParkingLot> parkingLotStallList = DatabaseFacade.selectAllFromParkingLot(CurrentInfo.STALLTYPE);
+      
+     
+      ArrayList<ParkingLot> availableStallList = new ArrayList<ParkingLot>();
+      for(int i=0;i<parkingLotStallList.size();i++)
       {
-         if(stallArray[i] !=0)
+         if(parkingLotStallList.get(i).getParkingContollerDeviceState() !=0)
          {
-            availableStall.add(i+1);
+        	 availableStallList.add(parkingLotStallList.get(i));
          }
       }
 
-      if(reservation ==null)
+      System.out.println(entryState+" entry");
+      if(reservation == null)
       {
          result.put("result", "fail");
       }
@@ -221,20 +237,52 @@ public class ClientThread implements Runnable {
       {
          result.put("result", "fail");
       }
-      else if(reservation.getPhoneNumber().equals(phoneNumber) && entryState ==0)
+      else if(reservation.getPhoneNumber().equals(phoneNumber) && entryState == 0)
       {
          
          
          Calendar calendar = Calendar.getInstance();
            java.util.Date date = calendar.getTime();
           String today = (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
-          int assignNum = availableStall.iterator().next();
+          String assignDeviceID = availableStallList.iterator().next().getParkingContollerDeviceID();
+          String assignNum =assignDeviceID;
+          //String assignDeviceID = "0000000007";
+          //int assignNum = 7;
           System.out.println("assign num " + assignNum);
           
           CurrentInfo.reservationID = reservationID;
-          ParkingControllerServer.getCallback().SendParkingController(assignNum+"");
+          
+          System.out.println("assign num : "+assignNum+"");
+          String assgnArduinoID = deviceIDAndAuduioIDHashMap.get(assignDeviceID);
+          String entryArduinoID = deviceIDAndAuduioIDHashMap.get(CurrentInfo.entryID);
+          System.out.println(assgnArduinoID + " assgnArduinoID");
+          System.out.println(controllerIDClientHashMap.size() + " size");
+          if(controllerIDClientHashMap.get(assgnArduinoID) !=null && controllerIDClientHashMap.get(entryArduinoID) !=null)
+          {
+        	  if(assgnArduinoID.equals(entryArduinoID))
+        	  {
+        		
+        		  controllerIDClientHashMap.get(assgnArduinoID).SendParkingController(assignNum+"");
+            	  
+        	  }else
+        	  {
+        		  controllerIDClientHashMap.get(entryArduinoID).SendParkingController(CurrentInfo.ONLYENTRY);
+             	 
+        		  controllerIDClientHashMap.get(assgnArduinoID).SendParkingController(assignNum+"");
+        		  
+        		  //controllerIDClientHashMap.get(assgnArduinoID).SendParkingController("7");
+  
+        	  }
+        	  
+          }else
+          {
+        	  
+          }
+         
+          
           int entranceResult = DatabaseFacade.updateEntranceTimeFromReservation(phoneNumber, Timestamp.valueOf(today));
           int driverStateResult = DatabaseFacade.updateStateFromDriver(phoneNumber, "parked");
+          //DatabaseFacade.insertParkingposition(assignDeviceID);
           
           if(entranceResult > 0 && driverStateResult > 0)
           {
@@ -262,19 +310,7 @@ public class ClientThread implements Runnable {
 
       Reservation reservation = DatabaseFacade.selectAllFromReservation(phoneNumber);
       int exitState = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.exitID);
-      int satll1 = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.stall1);
-      int satll2 = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.stall2);
-      int satll3 = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.stall3);
-      int satll4 = DatabaseFacade.selectParkingControllerDeviceStateFromParkingLot(CurrentInfo.stall4);
-      int[] stallArray = {satll1,satll2,satll3,satll4};
-      ArrayList<Integer> availableStall = new ArrayList<Integer>();
-      for(int i=0;i<stallArray.length;i++)
-      {
-         if(stallArray[i] !=0)
-         {
-            availableStall.add(i+1);
-         }
-      }
+      
 
       if(reservation ==null)
       {
@@ -288,16 +324,22 @@ public class ClientThread implements Runnable {
       {
          
          
-         Calendar calendar = Calendar.getInstance();
-           java.util.Date date = calendar.getTime();
+          Calendar calendar = Calendar.getInstance();
+          java.util.Date date = calendar.getTime();
           String today = (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
-          int assignNum = availableStall.iterator().next();
-          System.out.println("assign num " + assignNum);
           
-          CurrentInfo.reservationID = reservationID;
-          ParkingControllerServer.getCallback().SendParkingController("5");
+          
+          
+          String assgnArduinoID = deviceIDAndAuduioIDHashMap.get(CurrentInfo.exitID);
+          controllerIDClientHashMap.get(assgnArduinoID).SendParkingController(CurrentInfo.exitID);
+          
           int exitResult = DatabaseFacade.updateExitTimeFromReservation(phoneNumber, Timestamp.valueOf(today));
           int driverStateResult = DatabaseFacade.updateStateFromDriver(phoneNumber, "paying");
+       // Added 16-07027 23:46
+          String parkingContollerDeviceID = DatabaseFacade.selectParkingContollerDeviceIDFromParkedPosition(reservationID);
+          DatabaseFacade.updateParkingContollerDeviceStateFromParkinglot(parkingContollerDeviceID, "1");
+          
+          DatabaseFacade.deleteParkedPosition(reservationID);
           
           if(exitResult > 0 && driverStateResult > 0)
           {
@@ -305,7 +347,7 @@ public class ClientThread implements Runnable {
              result.put("exitTime",today);
              result.put("state", "paying");
              
-            PayingInfo payingInfo = new PayingInfo(phoneNumber, state, reservationID);
+             PayingInfo payingInfo = new PayingInfo(phoneNumber, state, reservationID);
              
              payingQueue.offer(payingInfo);
              

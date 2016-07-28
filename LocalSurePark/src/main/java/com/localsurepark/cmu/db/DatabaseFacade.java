@@ -1,5 +1,6 @@
 package com.localsurepark.cmu.db;
 
+import java.net.Socket;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -7,12 +8,14 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import com.localsurepark.cmu.CurrentInfo;
 import com.localsurepark.cmu.domain.Driver;
 import com.localsurepark.cmu.domain.ParkedPosition;
 import com.localsurepark.cmu.domain.ParkingLot;
 import com.localsurepark.cmu.domain.Reservation;
+import com.localsurepark.cmu.parkingcontroller.SenderCallback;
 
 public class DatabaseFacade {
 	static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
@@ -394,7 +397,7 @@ public class DatabaseFacade {
 		System.out.println("\n\n- MySQL Connection Close");
 	}
 
-	public static void updateParkingContollerDevicesFromParkinglot(String deviceString) {
+	public static void updateParkingContollerDevicesFromParkinglot(String deviceString,Socket client,HashMap<String, SenderCallback> controllerIDClientHashMap, HashMap<String, String> deviceIDAndAuduioIDHashMap) {
 		Statement stmtS = null;
 		ResultSet rs = null;
 		Connection conn = null;
@@ -402,8 +405,13 @@ public class DatabaseFacade {
 		System.out.println("\n- MySQL Connection, execute updateParkingContollerDevicesFromParkinglot");
 		String str = deviceString;
 		String[] spaceDivide = str.split(" ");
+		System.out.println(spaceDivide.length);
 		for (int i = 0; i < spaceDivide.length; i++) {
 			if (i == 0) { // deviceController ID, need to input some array list
+				System.out.println("아두이노 등록");
+				SenderCallback callback = new SenderCallback(client);
+				controllerIDClientHashMap.put(spaceDivide[0], callback);
+				System.out.println(controllerIDClientHashMap.size());
 
 			} else {
 				/*
@@ -413,7 +421,7 @@ public class DatabaseFacade {
 				 * parkingContollerDeviceAlive,parkingContollerDeviceState,
 				 * parkingContollerID) Need to DB insert operation
 				 */
-				String[] results = str.split(",");
+				String[] results = spaceDivide[i].split(",");
 				try {
 					Class.forName(JDBC_DRIVER);
 					conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
@@ -421,10 +429,25 @@ public class DatabaseFacade {
 					// dbCntDevRegOperation");
 					stmtS = conn.createStatement();
 
+					
 					String selectSql;
 					selectSql = "SELECT parkingContollerDeviceID FROM parkinglot WHERE parkingContollerDeviceID = '"
 							+ results[0] + "'";
 					stmtS.execute(selectSql);
+
+					deviceIDAndAuduioIDHashMap.put(results[0],results[4]);
+				
+					if(Integer.parseInt(results[1]) == CurrentInfo.ENTRYTYPE)
+					{
+						System.out.println(results[1] + " id");
+						CurrentInfo.entryID = results[0];
+					}
+					
+					if(Integer.parseInt(results[1]) == CurrentInfo.EXITTYPE)
+					{
+						CurrentInfo.exitID = results[0];
+					}
+					
 					rs = stmtS.getResultSet();
 					if (rs.next()) {
 						// System.out.println("Parking controller device already
@@ -456,6 +479,8 @@ public class DatabaseFacade {
 						// register start.");
 						Statement stmtI = null;
 						try {
+							
+							
 							stmtI = conn.createStatement();
 							stmtI.execute("INSERT INTO parkinglot (parkingContollerDeviceID,parkingContollerDeviceType,"
 									+ "parkingContollerDeviceAlive,parkingContollerDeviceState,parkingContollerID) "
@@ -762,5 +787,100 @@ public class DatabaseFacade {
 		System.out.println("\n\n- MySQL Connection Close");
 		return result;
 	}
+	
+	
+	//Added
+	   public static ArrayList<ParkingLot> selectAllFromParkingLot (int parkingContollerDeviceType) {
+	      Connection conn = null;
+	      Statement stmtS = null;
+	      ResultSet rs = null;
+	      ArrayList<ParkingLot> result = new ArrayList<ParkingLot>();
+	      try {
+	         Class.forName(JDBC_DRIVER);
+	         conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
+	         System.out.println("\n- MySQL Connection, execute selectAllFromParkingLot");
+	         stmtS = conn.createStatement();
+	         rs = stmtS.executeQuery("SELECT * FROM parkinglot WHERE parkingContollerDeviceType = " + parkingContollerDeviceType);
+	         while (rs.next()) {
+	            ParkingLot tmp = new ParkingLot();
+	            tmp.setParkingContollerDeviceID(rs.getString(1));
+	            tmp.setParkingContollerDeviceType(rs.getInt(2));
+	            tmp.setParkingContollerDeviceAlive(rs.getInt(3));
+	            tmp.setParkingContollerDeviceState(rs.getInt(4));
+	            tmp.setParkingContollerID(rs.getString(5));
+	            result.add(tmp);
+	         }
+	      } catch (SQLException ex) {
+	         // handle any errors
+	         System.out.println("SQLException: " + ex.getMessage());
+	         System.out.println("SQLState: " + ex.getSQLState());
+	         System.out.println("VendorError: " + ex.getErrorCode());
+	      } catch (Exception ex) {
+	         ex.printStackTrace();
+	      } finally {
+	         if (rs != null) {
+	            try {
+	               rs.close();
+	            } catch (SQLException sqlEx) {
+	            } // ignore
+
+	            rs = null;
+	         }
+
+	         if (stmtS != null) {
+	            try {
+	               stmtS.close();
+	            } catch (SQLException sqlEx) {
+	            } // ignore
+
+	            stmtS = null;
+	         }
+	      }
+	      return result;
+	   }
+	   
+	   // Added 16-07027 23:46
+	   public static String selectParkingContollerDeviceIDFromParkedPosition(int reservationID) {
+	      Connection conn = null;
+	      Statement stmtS = null;
+	      ResultSet rs = null;
+	      String result = "";
+	      try {
+	         Class.forName(JDBC_DRIVER);
+	         conn = DriverManager.getConnection(DB_URL, USERNAME, PASSWORD);
+	         System.out.println("\n- MySQL Connection, execute selectParkingContollerDeviceIDFromParkedPosition");
+	         stmtS = conn.createStatement();
+	         rs = stmtS.executeQuery("SELECT parkingContollerDeviceID FROM parkedposition WHERE reservationID = '" + reservationID + "'");
+	         while (rs.next()) {
+	            result = rs.getString("parkingContollerDeviceID");
+	         }
+	      } catch (SQLException ex) {
+	         // handle any errors
+	         System.out.println("SQLException: " + ex.getMessage());
+	         System.out.println("SQLState: " + ex.getSQLState());
+	         System.out.println("VendorError: " + ex.getErrorCode());
+	      } catch (Exception ex) {
+	         ex.printStackTrace();
+	      } finally {
+	         if (rs != null) {
+	            try {
+	               rs.close();
+	            } catch (SQLException sqlEx) {
+	            } // ignore
+
+	            rs = null;
+	         }
+
+	         if (stmtS != null) {
+	            try {
+	               stmtS.close();
+	            } catch (SQLException sqlEx) {
+	            } // ignore
+
+	            stmtS = null;
+	         }
+	      }
+	      return result;
+	   }
 
 }
